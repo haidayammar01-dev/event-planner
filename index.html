@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Impeccable — Event Planning System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#5E4F46;
+    --ink-soft:#644A3C;
+    --paper:#FFF2E6;
+    --card:#FFFFFF;
+    --gold:#644A3C;
+    --gold-dark:#5E4F46;
+    --green:#5E4F46;
+    --green-bg:#DBC9BA;
+    --rust:#644A3C;
+    --rust-bg:#F6C2BA;
+    --amber-bg:#FDDCD3;
+    --slate:#7E7B67;
+    --line:#DBC9BA;
+    --line-dark:#7E7B67;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);}
+  h1,h2,h3,.display{font-family:'Fraunces',serif;letter-spacing:-0.01em;}
+  a{color:inherit;}
+  button{font-family:'Inter',sans-serif;cursor:pointer;}
+  input,select,textarea{font-family:'Inter',sans-serif;}
+
+  /* ---------- Auth screen ---------- */
+  #auth-screen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(100,74,60,0.14), transparent 40%),
+      var(--ink);
+  }
+  .auth-card{
+    width:380px;background:var(--card);border-radius:14px;padding:36px 32px;
+    box-shadow:0 30px 60px rgba(0,0,0,0.35);
+  }
+  .auth-card .eyebrow{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold-dark);font-weight:600;}
+  .auth-card h1{font-size:28px;margin:6px 0 2px;}
+  .auth-card p.sub{color:var(--slate);font-size:13.5px;margin:0 0 22px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px;color:var(--ink-soft);}
+  .field input, .field select{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--gold);outline-offset:1px;}
+  .btn-primary{
+    width:100%;padding:11px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:14.5px;font-weight:600;margin-top:6px;
+  }
+  .btn-primary:hover{background:var(--ink-soft);}
+  .auth-toggle{text-align:center;margin-top:16px;font-size:13px;color:var(--slate);}
+  .auth-toggle button{background:none;border:none;color:var(--gold-dark);font-weight:600;text-decoration:underline;font-size:13px;padding:0;}
+  #auth-error{color:var(--rust);font-size:13px;margin-top:10px;min-height:16px;}
+  .signup-role-row{display:flex;gap:8px;}
+  .signup-role-row .field{flex:1;}
+
+  /* ---------- App shell ---------- */
+  #app-shell{display:none;min-height:100vh;}
+  #app-shell.active{display:flex;}
+  .sidebar{
+    width:240px;flex-shrink:0;background:var(--ink);color:#FFF2E6;padding:26px 18px;
+    position:sticky;top:0;height:100vh;display:flex;flex-direction:column;
+  }
+  .sidebar .brand{font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin-bottom:2px;}
+  .sidebar .brand-sub{font-size:11px;color:#DBC9BA;letter-spacing:.08em;text-transform:uppercase;margin-bottom:28px;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:500;
+    color:#DBC9BA;cursor:pointer;margin-bottom:2px;
+  }
+  .nav-item:hover{background:var(--ink-soft);color:#fff;}
+  .nav-item.active{background:var(--gold);color:#FFF2E6;font-weight:600;}
+  .sidebar-footer{margin-top:auto;padding-top:16px;border-top:1px solid var(--line-dark);}
+  .sidebar-user{font-size:13px;color:#FFF2E6;font-weight:600;}
+  .sidebar-role{font-size:11px;color:#DBC9BA;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+  .btn-signout{background:none;border:1px solid var(--line-dark);color:#DBC9BA;padding:7px 10px;border-radius:7px;font-size:12.5px;width:100%;}
+  .btn-signout:hover{border-color:var(--gold);color:#fff;}
+
+  main{flex:1;padding:36px 44px;max-width:1100px;}
+  .page-header{margin-bottom:26px;}
+  .page-header h1{font-size:26px;margin:0 0 4px;}
+  .page-header p{color:var(--slate);font-size:14px;margin:0;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:18px;}
+  .card h2{font-size:17px;margin:0 0 14px;}
+  .card h3{font-size:14.5px;margin:0 0 10px;}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .btn-sm{padding:7px 13px;border-radius:7px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:600;color:var(--ink);}
+  .btn-sm:hover{border-color:var(--gold);}
+  .btn-gold{background:var(--gold);border:none;color:#fff;}
+  .btn-gold:hover{background:var(--gold-dark);}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--slate);padding:8px 10px;border-bottom:1px solid var(--line);}
+  td{padding:10px;border-bottom:1px solid var(--line);}
+  tr:last-child td{border-bottom:none;}
+
+  .badge{display:inline-block;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:600;}
+  .badge.planning{background:var(--amber-bg);color:var(--gold-dark);}
+  .badge.confirmed{background:var(--green-bg);color:var(--green);}
+  .badge.completed{background:#DBC9BA;color:#5E4F46;}
+  .badge.cancelled{background:var(--rust-bg);color:var(--rust);}
+
+  /* ticket-stub divider — signature element */
+  .ticket-divider{position:relative;height:1px;border-top:2px dashed var(--line);margin:16px 0;}
+  .ticket-divider::before, .ticket-divider::after{
+    content:"";position:absolute;top:-9px;width:18px;height:18px;border-radius:50%;background:var(--paper);border:1px solid var(--line);
+  }
+  .ticket-divider::before{left:-24px;}
+  .ticket-divider::after{right:-24px;}
+
+  .event-card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:12px;cursor:pointer;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .event-card:hover{border-color:var(--gold);}
+  .event-card .name{font-family:'Fraunces',serif;font-size:17px;font-weight:600;}
+  .event-card .meta{color:var(--slate);font-size:13px;margin-top:2px;}
+
+  .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--line);}
+  .tab{padding:9px 16px;font-size:13.5px;font-weight:600;color:var(--slate);cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--ink);border-bottom-color:var(--gold);}
+
+  .empty-state{text-align:center;padding:50px 20px;color:var(--slate);}
+  .empty-state .display{font-size:19px;color:var(--ink);margin-bottom:6px;}
+
+  .inline-form{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:end;}
+  .inline-form .field{margin-bottom:0;min-width:130px;flex:1;}
+  .back-link{font-size:13px;color:var(--slate);cursor:pointer;margin-bottom:14px;display:inline-block;}
+  .back-link:hover{color:var(--gold-dark);}
+  .muted{color:var(--slate);font-size:13px;}
+  .report-box{background:var(--amber-bg);border:1px solid #DBC9BA;border-radius:10px;padding:20px 22px;}
+  .report-box h2{font-family:'Fraunces',serif;font-size:22px;}
+  .toggle-row{display:flex;align-items:center;gap:8px;font-size:13px;}
+  @media (max-width:820px){
+    #app-shell.active{flex-direction:column;}
+    .sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;align-items:center;}
+    .sidebar-footer{margin-left:auto;}
+    main{padding:22px;}
+    .grid-2{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- AUTH SCREEN -->
+<!-- ============================================================ -->
+<div id="landing-screen" style="min-height:100vh;background:var(--paper);">
+  <div style="max-width:880px;margin:0 auto;padding:56px 24px 70px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:46px;">
+      <div>
+        <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:600;color:var(--ink);">Impeccable</div>
+        <div style="font-size:11px;color:var(--slate);letter-spacing:.1em;text-transform:uppercase;">Event operations</div>
+      </div>
+      <button onclick="goToAuth('staff')" style="background:none;border:1px solid var(--line);padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;color:var(--ink);">Sign in</button>
+    </div>
+
+    <h1 style="font-size:34px;line-height:1.15;margin:0 0 14px;max-width:560px;">Everything for your event, in one place.</h1>
+    <p style="font-size:15px;color:var(--slate);max-width:520px;margin:0 0 40px;line-height:1.6;">One private page for your planning team, your clients, and your vendors — each seeing only what's meant for them. Pick which one is you to get started.</p>
+
+    <div class="grid-2" style="grid-template-columns:repeat(3,1fr);gap:16px;">
+      <div class="card" style="margin-bottom:0;">
+        <h3 style="font-family:'Fraunces',serif;font-size:17px;">Planning team</h3>
+        <p class="muted" style="min-height:60px;">Create and run events — budgets, vendor assignments, run of show, checklists, and client reports.</p>
+        <button class="btn-sm btn-gold" style="width:100%;" onclick="goToAuth('staff')">Staff sign in</button>
+      </div>
+      <div class="card" style="margin-bottom:0;">
+        <h3 style="font-family:'Fraunces',serif;font-size:17px;">Clients</h3>
+        <p class="muted" style="min-height:60px;">See the progress reports your planner publishes for your event — a clean summary, no internal details.</p>
+        <button class="btn-sm btn-gold" style="width:100%;" onclick="goToAuth('client')">Client sign up</button>
+      </div>
+      <div class="card" style="margin-bottom:0;">
+        <h3 style="font-family:'Fraunces',serif;font-size:17px;">Vendors</h3>
+        <p class="muted" style="min-height:60px;">See your arrival time, load-in notes, and onsite contact for events you're booked on.</p>
+        <button class="btn-sm btn-gold" style="width:100%;" onclick="goToAuth('vendor')">Vendor sign up</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="auth-screen" style="display:none;">
+  <div class="auth-card">
+    <span class="back-link" onclick="backToLanding()" style="display:inline-block;margin-bottom:4px;">← Back</span>
+    <div class="eyebrow">Impeccable</div>
+    <h1 id="auth-title">Sign in</h1>
+    <p class="sub" id="auth-sub">Corporate events & store openings, run without a single dropped detail.</p>
+
+    <form id="login-form">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="login-username" autocapitalize="off" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login-password" required>
+      </div>
+      <button class="btn-primary" type="submit">Sign in</button>
+    </form>
+
+    <form id="signup-form" style="display:none;">
+      <div class="field">
+        <label>Full name</label>
+        <input type="text" id="signup-name" required>
+      </div>
+      <div class="field">
+        <label>I am a...</label>
+        <select id="signup-role">
+          <option value="client">Client</option>
+          <option value="vendor">Vendor</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Company (optional)</label>
+        <input type="text" id="signup-company">
+      </div>
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="signup-username" autocapitalize="off" autocomplete="username" required placeholder="No spaces or symbols">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="signup-password" required minlength="6">
+      </div>
+      <button class="btn-primary" type="submit">Create account</button>
+    </form>
+
+    <div id="auth-error"></div>
+
+    <div class="auth-toggle">
+      <span id="toggle-to-signup-wrap">New here? <button id="toggle-to-signup">Create an account</button></span>
+      <span id="toggle-to-login-wrap" style="display:none;">Already have one? <button id="toggle-to-login">Sign in</button></span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- APP SHELL -->
+<!-- ============================================================ -->
+<div id="app-shell">
+  <div class="sidebar">
+    <div>
+      <div class="brand">Impeccable</div>
+      <div class="brand-sub">Event Operations</div>
+    </div>
+    <nav id="nav-items"></nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" id="sidebar-user">—</div>
+      <div class="sidebar-role" id="sidebar-role">—</div>
+      <button class="btn-signout" id="signout-btn">Sign out</button>
+    </div>
+  </div>
+  <main id="main-content"></main>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — replace with your Supabase project values
+   ============================================================ */
+const SUPABASE_URL = 'https://udjcuooowrlnvsxouyyv.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_7RrnEQ0jeRWtBaDbVTwrDQ_QAkwiUV-';
+
+let sb = null;
+let CONFIGURED = false;
+try {
+  if (SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('YOUR_SUPABASE') && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE')) {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    CONFIGURED = true;
+  }
+} catch (e) {
+  console.error('Supabase init failed:', e);
+  CONFIGURED = false;
+}
+
+if (!CONFIGURED) {
+  document.getElementById('auth-screen').innerHTML = `
+    <div class="auth-card" style="width:460px;">
+      <div class="eyebrow">Setup needed</div>
+      <h1 style="font-size:22px;">Connect your Supabase project</h1>
+      <p class="sub">This page loads fine, but it can't talk to a database yet. Two lines need real values.</p>
+      <ol style="font-size:13.5px;color:var(--ink-soft);line-height:1.7;padding-left:18px;margin:0 0 16px;">
+        <li>Create a free project at <strong>supabase.com</strong></li>
+        <li>Run <strong>schema.sql</strong> in its SQL Editor (one paste, one click)</li>
+        <li>Copy your <strong>Project URL</strong> and <strong>anon public key</strong> from Project Settings → API</li>
+        <li>Open this <strong>index.html</strong> file in a text editor, find <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> near the top of the &lt;script&gt; tag, and paste your real values in</li>
+        <li>Save, and reopen this page (or re-upload if hosted)</li>
+      </ol>
+      <p class="sub" style="margin:0;">Everything else — 3 logins, events, budgets, vendor logistics, client reports — is already built and ready. This is the only step left.</p>
+    </div>
+  `;
+  throw new Error('Supabase not configured — see on-screen instructions.');
+}
+
+let currentUser = null;
+let currentProfile = null;
+let activeEventId = null;
+let activeAdminTab = 'overview';
+
+/* ============================================================
+   AUTH SCREEN LOGIC
+   ============================================================ */
+const loginForm = document.getElementById('login-form');
+const signupForm = document.getElementById('signup-form');
+const authError = document.getElementById('auth-error');
+
+document.getElementById('toggle-to-signup').onclick = () => {
+  loginForm.style.display = 'none';
+  signupForm.style.display = 'block';
+  document.getElementById('toggle-to-signup-wrap').style.display = 'none';
+  document.getElementById('toggle-to-login-wrap').style.display = 'inline';
+  document.getElementById('auth-title').textContent = 'Create your account';
+  authError.textContent = '';
+};
+document.getElementById('toggle-to-login').onclick = () => {
+  signupForm.style.display = 'none';
+  loginForm.style.display = 'block';
+  document.getElementById('toggle-to-login-wrap').style.display = 'none';
+  document.getElementById('toggle-to-signup-wrap').style.display = 'inline';
+  document.getElementById('auth-title').textContent = 'Sign in';
+  authError.textContent = '';
+};
+
+function usernameToEmail(username) {
+  const clean = username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  return clean + '@haidayammar.internal';
+}
+
+loginForm.onsubmit = async (e) => {
+  e.preventDefault();
+  authError.textContent = '';
+  const email = usernameToEmail(document.getElementById('login-username').value);
+  const password = document.getElementById('login-password').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) authError.textContent = 'Wrong username or password.';
+};
+
+signupForm.onsubmit = async (e) => {
+  e.preventDefault();
+  authError.textContent = '';
+  const full_name = document.getElementById('signup-name').value;
+  const role = document.getElementById('signup-role').value;
+  const company = document.getElementById('signup-company').value;
+  const usernameRaw = document.getElementById('signup-username').value;
+  const email = usernameToEmail(usernameRaw);
+  const password = document.getElementById('signup-password').value;
+  const { error } = await sb.auth.signUp({
+    email, password,
+    options: { data: { full_name, role, company, username: usernameRaw.trim().toLowerCase() } }
+  });
+  if (error) {
+    authError.textContent = error.message.includes('already registered') ? 'That username is taken — try another.' : error.message;
+    return;
+  }
+  authError.style.color = 'var(--green)';
+  authError.textContent = 'Account created — you can sign in now.';
+};
+
+function goToAuth(role) {
+  document.getElementById('landing-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  if (role === 'staff') {
+    signupForm.style.display = 'none';
+    loginForm.style.display = 'block';
+    document.getElementById('toggle-to-login-wrap').style.display = 'none';
+    document.getElementById('toggle-to-signup-wrap').style.display = 'inline';
+    document.getElementById('auth-title').textContent = 'Sign in';
+  } else {
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'block';
+    document.getElementById('toggle-to-signup-wrap').style.display = 'none';
+    document.getElementById('toggle-to-login-wrap').style.display = 'inline';
+    document.getElementById('auth-title').textContent = 'Create your account';
+    document.getElementById('signup-role').value = role;
+  }
+  authError.textContent = '';
+}
+function backToLanding() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('landing-screen').style.display = 'block';
+}
+
+document.getElementById('signout-btn').onclick = () => sb.auth.signOut();
+
+/* ============================================================
+   SESSION HANDLING
+   ============================================================ */
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session && session.user) {
+    currentUser = session.user;
+    document.getElementById('landing-screen').style.display = 'none';
+    await loadProfileAndRender();
+  } else {
+    currentUser = null;
+    currentProfile = null;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('landing-screen').style.display = 'block';
+    document.getElementById('app-shell').classList.remove('active');
+  }
+});
+
+async function loadProfileAndRender() {
+  const { data, error } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (error || !data) {
+    // profile row may not exist yet (trigger lag) — retry once
+    await new Promise(r => setTimeout(r, 800));
+    const retry = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+    if (retry.error) { console.error(retry.error); return; }
+    currentProfile = retry.data;
+  } else {
+    currentProfile = data;
+  }
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-shell').classList.add('active');
+  document.getElementById('sidebar-user').textContent = currentProfile.full_name;
+  document.getElementById('sidebar-role').textContent = currentProfile.role;
+  renderNav();
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+function renderNav() {
+  const nav = document.getElementById('nav-items');
+  if (currentProfile.role === 'admin') {
+    nav.innerHTML = `<div class="nav-item active" onclick="showEventsList()">Events</div>`;
+    showEventsList();
+  } else if (currentProfile.role === 'client') {
+    nav.innerHTML = `<div class="nav-item active">My Reports</div>`;
+    renderClientView();
+  } else if (currentProfile.role === 'vendor') {
+    nav.innerHTML = `<div class="nav-item active">My Assignments</div>`;
+    renderVendorView();
+  }
+}
+
+/* ============================================================
+   ADMIN VIEW
+   ============================================================ */
+async function showEventsList() {
+  activeEventId = null;
+  const main = document.getElementById('main-content');
+  main.innerHTML = `
+    <div class="page-header">
+      <h1>Events</h1>
+      <p>Every event you're running, in one place.</p>
+    </div>
+    <div class="card">
+      <h2>New event</h2>
+      <form id="new-event-form" class="inline-form">
+        <div class="field"><label>Event name</label><input required id="ne-name" placeholder="Q3 Flagship Store Opening"></div>
+        <div class="field"><label>Date</label><input required type="date" id="ne-date"></div>
+        <div class="field"><label>Venue</label><input id="ne-venue" placeholder="123 Main St"></div>
+        <div class="field"><label>Budget total</label><input type="number" id="ne-budget" placeholder="25000"></div>
+        <button class="btn-sm btn-gold" type="submit">Create event</button>
+      </form>
+    </div>
+    <div id="events-list"></div>
+  `;
+  document.getElementById('new-event-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const { error } = await sb.from('events').insert({
+      name: document.getElementById('ne-name').value,
+      event_date: document.getElementById('ne-date').value,
+      venue: document.getElementById('ne-venue').value,
+      budget_total: parseFloat(document.getElementById('ne-budget').value) || 0,
+      created_by: currentUser.id,
+      status: 'planning'
+    });
+    if (error) alert(error.message); else showEventsList();
+  };
+
+  const { data: events, error } = await sb.from('events').select('*').order('created_at', { ascending: false });
+  const list = document.getElementById('events-list');
+  if (error) { list.innerHTML = `<p class="muted">${error.message}</p>`; return; }
+  if (!events.length) { list.innerHTML = `<div class="empty-state"><div class="display">No events yet</div><p>Create your first one above.</p></div>`; return; }
+  list.innerHTML = events.map(ev => `
+    <div class="event-card" onclick="openEvent('${ev.id}')">
+      <div>
+        <div class="name">${ev.name}</div>
+        <div class="meta">${ev.event_date || 'No date set'} · ${ev.venue || 'Venue TBD'}</div>
+      </div>
+      <span class="badge ${ev.status}">${ev.status}</span>
+    </div>
+  `).join('');
+}
+
+async function openEvent(eventId) {
+  activeEventId = eventId;
+  activeAdminTab = 'overview';
+  renderEventDetail();
+}
+
+async function renderEventDetail() {
+  const main = document.getElementById('main-content');
+  const { data: ev } = await sb.from('events').select('*').eq('id', activeEventId).single();
+  if (!ev) return;
+
+  const tabs = ['overview','budget','vendors','rentals','ros','checklist','report'];
+  const labels = { overview:'Overview', budget:'Budget', vendors:'Vendors', rentals:'Rentals', ros:'Run of Show', checklist:'Checklist', report:'Client Report' };
+
+  main.innerHTML = `
+    <span class="back-link" onclick="showEventsList()">← All events</span>
+    <div class="page-header">
+      <h1>${ev.name}</h1>
+      <p>${ev.event_date || 'No date'} · ${ev.venue || 'Venue TBD'} · <span class="badge ${ev.status}">${ev.status}</span></p>
+    </div>
+    <div class="tabs">
+      ${tabs.map(t => `<div class="tab ${activeAdminTab===t?'active':''}" onclick="switchAdminTab('${t}')">${labels[t]}</div>`).join('')}
+    </div>
+    <div id="tab-content"></div>
+  `;
+  renderAdminTab(ev);
+}
+
+function switchAdminTab(tab) { activeAdminTab = tab; renderEventDetail(); }
+
+async function renderAdminTab(ev) {
+  const el = document.getElementById('tab-content');
+  if (activeAdminTab === 'overview') return renderOverviewTab(el, ev);
+  if (activeAdminTab === 'budget') return renderBudgetTab(el, ev);
+  if (activeAdminTab === 'vendors') return renderVendorsTab(el, ev);
+  if (activeAdminTab === 'rentals') return renderRentalsTab(el, ev);
+  if (activeAdminTab === 'ros') return renderRosTab(el, ev);
+  if (activeAdminTab === 'checklist') return renderChecklistTab(el, ev);
+  if (activeAdminTab === 'report') return renderReportTab(el, ev);
+}
+
+/* --- OVERVIEW --- */
+async function renderOverviewTab(el, ev) {
+  const { data: clients } = await sb.from('profiles').select('*').eq('role','client');
+  el.innerHTML = `
+    <div class="card">
+      <h2>Status</h2>
+      <div class="inline-form">
+        <div class="field"><label>Status</label>
+          <select id="ov-status">
+            ${['planning','confirmed','completed','cancelled'].map(s => `<option value="${s}" ${ev.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn-sm" onclick="updateEventStatus()">Update</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Assign client</h2>
+      <p class="muted">Only the client selected here can view this event's published report.</p>
+      <div class="inline-form">
+        <div class="field"><label>Client</label>
+          <select id="ov-client">
+            <option value="">— none —</option>
+            ${clients.map(c => `<option value="${c.id}" ${ev.client_id===c.id?'selected':''}>${c.full_name} ${c.company?('· '+c.company):''}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn-sm" onclick="assignClient()">Save</button>
+      </div>
+    </div>
+  `;
+}
+window.updateEventStatus = async () => {
+  await sb.from('events').update({ status: document.getElementById('ov-status').value }).eq('id', activeEventId);
+  renderEventDetail();
+};
+window.assignClient = async () => {
+  const val = document.getElementById('ov-client').value;
+  await sb.from('events').update({ client_id: val || null }).eq('id', activeEventId);
+  renderEventDetail();
+};
+
+/* --- BUDGET --- */
+async function renderBudgetTab(el, ev) {
+  const { data: items } = await sb.from('budget_items').select('*').eq('event_id', activeEventId).order('created_at');
+  const totalEst = (items||[]).reduce((s,i)=>s+(parseFloat(i.estimated)||0),0);
+  const totalAct = (items||[]).reduce((s,i)=>s+(parseFloat(i.actual)||0),0);
+  el.innerHTML = `
+    <div class="card">
+      <h2>Budget line items</h2>
+      <table>
+        <tr><th>Category</th><th>Estimated</th><th>Actual</th><th>Deposit</th><th>Balance due</th><th></th></tr>
+        ${(items||[]).map(i => `
+          <tr>
+            <td>${i.category}</td>
+            <td>₦${Number(i.estimated).toLocaleString()}</td>
+            <td>₦${Number(i.actual).toLocaleString()}</td>
+            <td>${i.deposit_paid ? '✅' : '—'}</td>
+            <td>${i.balance_due_date || '—'}</td>
+            <td><span class="btn-sm" onclick="deleteBudgetItem('${i.id}')" style="cursor:pointer;">Remove</span></td>
+          </tr>
+        `).join('') || '<tr><td colspan="6" class="muted">No line items yet.</td></tr>'}
+        <tr><td><strong>Total</strong></td><td><strong>₦${totalEst.toLocaleString()}</strong></td><td><strong>₦${totalAct.toLocaleString()}</strong></td><td colspan="2"></td><td></td></tr>
+      </table>
+      <div class="ticket-divider"></div>
+      <h3>Add line item</h3>
+      <form id="budget-form" class="inline-form">
+        <div class="field"><label>Category</label><input required id="bi-category" placeholder="Catering"></div>
+        <div class="field"><label>Estimated</label><input type="number" id="bi-estimated" placeholder="5000"></div>
+        <div class="field"><label>Actual</label><input type="number" id="bi-actual" placeholder="0"></div>
+        <div class="field"><label>Balance due date</label><input type="date" id="bi-duedate"></div>
+        <div class="field toggle-row"><label style="margin:0;"><input type="checkbox" id="bi-deposit"> Deposit paid</label></div>
+        <button class="btn-sm btn-gold" type="submit">Add</button>
+      </form>
+    </div>
+  `;
+  document.getElementById('budget-form').onsubmit = async (e) => {
+    e.preventDefault();
+    await sb.from('budget_items').insert({
+      event_id: activeEventId,
+      category: document.getElementById('bi-category').value,
+      estimated: parseFloat(document.getElementById('bi-estimated').value) || 0,
+      actual: parseFloat(document.getElementById('bi-actual').value) || 0,
+      deposit_paid: document.getElementById('bi-deposit').checked,
+      balance_due_date: document.getElementById('bi-duedate').value || null
+    });
+    renderEventDetail();
+  };
+}
+window.deleteBudgetItem = async (id) => { await sb.from('budget_items').delete().eq('id', id); renderEventDetail(); };
+
+/* --- VENDORS --- */
+async function renderVendorsTab(el, ev) {
+  const { data: assigned } = await sb.from('event_vendors').select('*, profiles:vendor_id(full_name, company, service_type)').eq('event_id', activeEventId);
+  const { data: allVendors } = await sb.from('profiles').select('*').eq('role','vendor');
+  el.innerHTML = `
+    <div class="card">
+      <h2>Assigned vendors</h2>
+      <table>
+        <tr><th>Vendor</th><th>Service</th><th>Arrival</th><th>Status</th><th></th></tr>
+        ${(assigned||[]).map(a => `
+          <tr>
+            <td>${a.profiles?.full_name || 'Unknown'}</td>
+            <td>${a.profiles?.service_type || '—'}</td>
+            <td>${a.arrival_time ? new Date(a.arrival_time).toLocaleString() : '—'}</td>
+            <td>${a.status}</td>
+            <td><span class="btn-sm" style="cursor:pointer;" onclick="removeVendorAssignment('${a.id}')">Remove</span></td>
+          </tr>
+        `).join('') || '<tr><td colspan="5" class="muted">No vendors assigned yet.</td></tr>'}
+      </table>
+      <div class="ticket-divider"></div>
+      <h3>Assign a vendor</h3>
+      <form id="vendor-form" class="inline-form">
+        <div class="field"><label>Vendor</label>
+          <select required id="va-vendor">
+            <option value="">Select vendor</option>
+            ${(allVendors||[]).map(v => `<option value="${v.id}">${v.full_name} ${v.company?('· '+v.company):''}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Arrival time</label><input type="datetime-local" id="va-arrival"></div>
+        <div class="field"><label>Onsite contact</label><input id="va-contact" placeholder="You / phone"></div>
+        <button class="btn-sm btn-gold" type="submit">Assign</button>
+      </form>
+      <div class="field" style="margin-top:10px;"><label>Load-in notes</label><textarea id="va-notes" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;" placeholder="Dock access, elevator code, parking instructions..."></textarea></div>
+    </div>
+  `;
+  document.getElementById('vendor-form').onsubmit = async (e) => {
+    e.preventDefault();
+    await sb.from('event_vendors').insert({
+      event_id: activeEventId,
+      vendor_id: document.getElementById('va-vendor').value,
+      arrival_time: document.getElementById('va-arrival').value || null,
+      onsite_contact: document.getElementById('va-contact').value,
+      load_in_notes: document.getElementById('va-notes').value,
+      status: 'confirmed'
+    });
+    renderEventDetail();
+  };
+}
+window.removeVendorAssignment = async (id) => { await sb.from('event_vendors').delete().eq('id', id); renderEventDetail(); };
+
+/* --- RENTALS --- */
+async function renderRentalsTab(el, ev) {
+  const { data: items } = await sb.from('rental_items').select('*, profiles:vendor_id(full_name, company)').eq('event_id', activeEventId).order('created_at');
+  const { data: allVendors } = await sb.from('profiles').select('*').eq('role','vendor');
+
+  function statusFor(i) {
+    if (i.quantity_returned != null) {
+      return i.quantity_returned === i.quantity_expected
+        ? { label:'returned', bg:'#DBC9BA', fg:'#5E4F46' }
+        : { label:'return mismatch', bg:'#F6C2BA', fg:'#644A3C' };
+    }
+    if (i.quantity_received == null) return { label:'awaiting delivery', bg:'#FDDCD3', fg:'#644A3C' };
+    return i.quantity_received === i.quantity_expected
+      ? { label:'received — matches', bg:'#DBC9BA', fg:'#5E4F46' }
+      : { label:'discrepancy', bg:'#F6C2BA', fg:'#644A3C' };
+  }
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>Rental tracking</h2>
+      <p class="muted">Expected vs. received vs. returned, per item. Mismatches are flagged automatically.</p>
+      <table>
+        <tr><th>Item</th><th>Vendor</th><th>Expected</th><th>Received</th><th>Returned</th><th>Status</th><th>Notes</th><th></th></tr>
+        ${(items||[]).map(i => {
+          const s = statusFor(i);
+          return `
+          <tr>
+            <td>${i.item_name}</td>
+            <td>${i.profiles?.full_name || '—'}</td>
+            <td>${i.quantity_expected ?? '—'}</td>
+            <td>
+              <input type="number" value="${i.quantity_received ?? ''}" style="width:60px;padding:5px;border:1px solid var(--line);border-radius:6px;" onchange="updateRentalField('${i.id}','quantity_received',this.value)">
+            </td>
+            <td>
+              <input type="number" value="${i.quantity_returned ?? ''}" style="width:60px;padding:5px;border:1px solid var(--line);border-radius:6px;" onchange="updateRentalField('${i.id}','quantity_returned',this.value)">
+            </td>
+            <td><span class="badge" style="background:${s.bg};color:${s.fg};">${s.label}</span></td>
+            <td>${i.condition_notes || '—'}</td>
+            <td><span class="btn-sm" style="cursor:pointer;" onclick="deleteRental('${i.id}')">Remove</span></td>
+          </tr>
+        `;}).join('') || '<tr><td colspan="8" class="muted">No rental items logged yet.</td></tr>'}
+      </table>
+      <div class="ticket-divider"></div>
+      <h3>Log a rental item</h3>
+      <form id="rental-form" class="inline-form">
+        <div class="field"><label>Item</label><input required id="rt-item" placeholder="Round tables (60in)"></div>
+        <div class="field"><label>Vendor</label>
+          <select id="rt-vendor">
+            <option value="">— none —</option>
+            ${(allVendors||[]).map(v => `<option value="${v.id}">${v.full_name}${v.company?(' · '+v.company):''}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Quantity expected</label><input type="number" required id="rt-expected" placeholder="20"></div>
+        <button class="btn-sm btn-gold" type="submit">Add</button>
+      </form>
+      <div class="field" style="margin-top:10px;"><label>Condition notes (optional)</label><input id="rt-notes" placeholder="2 chairs arrived with torn upholstery"></div>
+      <p class="muted" style="margin-top:8px;">Tip: fill in "Received" the moment items arrive at load-in, and "Returned" at load-out — that's what makes this an audit trail instead of a guess.</p>
+    </div>
+  `;
+  document.getElementById('rental-form').onsubmit = async (e) => {
+    e.preventDefault();
+    await sb.from('rental_items').insert({
+      event_id: activeEventId,
+      item_name: document.getElementById('rt-item').value,
+      vendor_id: document.getElementById('rt-vendor').value || null,
+      quantity_expected: parseFloat(document.getElementById('rt-expected').value) || 0,
+      condition_notes: document.getElementById('rt-notes').value
+    });
+    renderEventDetail();
+  };
+}
+window.updateRentalField = async (id, field, value) => {
+  const payload = {};
+  payload[field] = value === '' ? null : parseFloat(value);
+  if (field === 'quantity_received' && value !== '') payload.received_at = new Date().toISOString();
+  if (field === 'quantity_returned' && value !== '') payload.returned_at = new Date().toISOString();
+  await sb.from('rental_items').update(payload).eq('id', id);
+  renderEventDetail();
+};
+window.deleteRental = async (id) => { await sb.from('rental_items').delete().eq('id', id); renderEventDetail(); };
+
+/* --- RUN OF SHOW --- */
+async function renderRosTab(el, ev) {
+  const { data: items } = await sb.from('ros_items').select('*').eq('event_id', activeEventId).order('sort_order');
+  el.innerHTML = `
+    <div class="card">
+      <h2>Run of show</h2>
+      <table>
+        <tr><th>Time</th><th>Activity</th><th>Owner</th><th>Location</th><th>Notes</th><th></th></tr>
+        ${(items||[]).map(i => `
+          <tr>
+            <td>${i.time_slot}</td><td>${i.activity}</td><td>${i.owner||'—'}</td><td>${i.location||'—'}</td><td>${i.notes||'—'}</td>
+            <td><span class="btn-sm" style="cursor:pointer;" onclick="deleteRos('${i.id}')">Remove</span></td>
+          </tr>
+        `).join('') || '<tr><td colspan="6" class="muted">Nothing scheduled yet.</td></tr>'}
+      </table>
+      <div class="ticket-divider"></div>
+      <h3>Add item</h3>
+      <form id="ros-form" class="inline-form">
+        <div class="field"><label>Time</label><input required id="ros-time" placeholder="6:00 PM"></div>
+        <div class="field"><label>Activity</label><input required id="ros-activity" placeholder="Doors open"></div>
+        <div class="field"><label>Owner</label><input id="ros-owner" placeholder="Venue staff"></div>
+        <div class="field"><label>Location</label><input id="ros-location" placeholder="Main entrance"></div>
+        <button class="btn-sm btn-gold" type="submit">Add</button>
+      </form>
+    </div>
+  `;
+  document.getElementById('ros-form').onsubmit = async (e) => {
+    e.preventDefault();
+    await sb.from('ros_items').insert({
+      event_id: activeEventId,
+      time_slot: document.getElementById('ros-time').value,
+      activity: document.getElementById('ros-activity').value,
+      owner: document.getElementById('ros-owner').value,
+      location: document.getElementById('ros-location').value,
+      sort_order: (items||[]).length
+    });
+    renderEventDetail();
+  };
+}
+window.deleteRos = async (id) => { await sb.from('ros_items').delete().eq('id', id); renderEventDetail(); };
+
+/* --- CHECKLIST --- */
+async function renderChecklistTab(el, ev) {
+  const { data: items } = await sb.from('checklist_items').select('*').eq('event_id', activeEventId).order('created_at');
+  el.innerHTML = `
+    <div class="card">
+      <h2>Checklist</h2>
+      ${(items||[]).map(i => `
+        <div class="toggle-row" style="margin-bottom:8px;">
+          <input type="checkbox" ${i.done?'checked':''} onchange="toggleChecklist('${i.id}', this.checked)">
+          <span style="${i.done?'text-decoration:line-through;color:var(--slate);':''}">${i.task}</span>
+          <span class="muted">— ${i.phase||''} ${i.due_date?('· due '+i.due_date):''}</span>
+        </div>
+      `).join('') || '<p class="muted">No tasks yet.</p>'}
+      <div class="ticket-divider"></div>
+      <h3>Add task</h3>
+      <form id="checklist-form" class="inline-form">
+        <div class="field"><label>Task</label><input required id="cl-task" placeholder="Confirm final headcount"></div>
+        <div class="field"><label>Phase</label><input id="cl-phase" placeholder="2 weeks out"></div>
+        <div class="field"><label>Due date</label><input type="date" id="cl-due"></div>
+        <button class="btn-sm btn-gold" type="submit">Add</button>
+      </form>
+    </div>
+  `;
+  document.getElementById('checklist-form').onsubmit = async (e) => {
+    e.preventDefault();
+    await sb.from('checklist_items').insert({
+      event_id: activeEventId,
+      task: document.getElementById('cl-task').value,
+      phase: document.getElementById('cl-phase').value,
+      due_date: document.getElementById('cl-due').value || null
+    });
+    renderEventDetail();
+  };
+}
+window.toggleChecklist = async (id, val) => { await sb.from('checklist_items').update({ done: val }).eq('id', id); };
+
+/* --- CLIENT REPORT COMPOSER --- */
+async function renderReportTab(el, ev) {
+  const { data: reports } = await sb.from('client_reports').select('*').eq('event_id', activeEventId).order('generated_at', { ascending:false });
+  const latest = reports && reports[0];
+  el.innerHTML = `
+    <div class="card">
+      <h2>Compose client report</h2>
+      <p class="muted">This is the ONLY thing your client will see. No vendor names, no line-item costs — just the polished summary.</p>
+      <div class="field"><label>Title</label><input id="rp-title" value="${latest?.title || ev.name+' — Progress Report'}"></div>
+      <div class="field"><label>Summary</label><textarea id="rp-summary" rows="4" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;">${latest?.summary || ''}</textarea></div>
+      <div class="field"><label>Budget total to show client</label><input type="number" id="rp-budget" value="${latest?.budget_total_shown ?? ev.budget_total ?? ''}"></div>
+      <div class="field"><label>Highlights</label><textarea id="rp-highlights" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;" placeholder="Venue confirmed, catering tasting scheduled...">${latest?.highlights || ''}</textarea></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn-sm" onclick="saveReport(false)">Save draft</button>
+        <button class="btn-sm btn-gold" onclick="saveReport(true)">Publish to client</button>
+      </div>
+      ${latest ? `<p class="muted" style="margin-top:10px;">Status: ${latest.published ? '✅ Published' : 'Draft only — client cannot see this yet'}</p>` : ''}
+    </div>
+  `;
+}
+window.saveReport = async (publish) => {
+  const payload = {
+    event_id: activeEventId,
+    title: document.getElementById('rp-title').value,
+    summary: document.getElementById('rp-summary').value,
+    budget_total_shown: parseFloat(document.getElementById('rp-budget').value) || 0,
+    highlights: document.getElementById('rp-highlights').value,
+    published: publish,
+    generated_at: new Date().toISOString()
+  };
+  const { data: existing } = await sb.from('client_reports').select('id').eq('event_id', activeEventId).order('generated_at',{ascending:false}).limit(1);
+  if (existing && existing.length) {
+    await sb.from('client_reports').update(payload).eq('id', existing[0].id);
+  } else {
+    await sb.from('client_reports').insert(payload);
+  }
+  renderEventDetail();
+};
+
+/* ============================================================
+   CLIENT VIEW — reports only
+   ============================================================ */
+async function renderClientView() {
+  const main = document.getElementById('main-content');
+  const { data: reports, error } = await sb
+    .from('client_reports')
+    .select('*, events:event_id(name, event_date, venue, status)')
+    .eq('published', true)
+    .order('generated_at', { ascending: false });
+
+  main.innerHTML = `
+    <div class="page-header">
+      <h1>Your event reports</h1>
+      <p>Everything your planner has published for you, in one place.</p>
+    </div>
+    <div id="client-reports"></div>
+  `;
+  const wrap = document.getElementById('client-reports');
+  if (error) { wrap.innerHTML = `<p class="muted">${error.message}</p>`; return; }
+  if (!reports || !reports.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="display">No reports yet</div><p>Your planner will publish an update here as your event comes together.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = reports.map(r => `
+    <div class="report-box" style="margin-bottom:18px;">
+      <h2>${r.title}</h2>
+      <p class="muted">${r.events?.name || ''} · ${r.events?.event_date || ''} · ${r.events?.venue || ''} <span class="badge ${r.events?.status}">${r.events?.status}</span></p>
+      <div class="ticket-divider"></div>
+      <p>${r.summary || ''}</p>
+      ${r.budget_total_shown ? `<p><strong>Budget:</strong> ₦${Number(r.budget_total_shown).toLocaleString()}</p>` : ''}
+      ${r.highlights ? `<p><strong>Highlights:</strong> ${r.highlights}</p>` : ''}
+      <p class="muted" style="margin-top:14px;font-size:12px;">Last updated ${new Date(r.generated_at).toLocaleString()}</p>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   VENDOR VIEW — logistics only
+   ============================================================ */
+async function renderVendorView() {
+  const main = document.getElementById('main-content');
+  const { data: assignments, error } = await sb
+    .from('event_vendors')
+    .select('*, events:event_id(name, event_date, venue, status)')
+    .order('arrival_time', { ascending: true });
+
+  main.innerHTML = `
+    <div class="page-header">
+      <h1>Your assignments</h1>
+      <p>Arrival times and load-in details for events you're working.</p>
+    </div>
+    <div id="vendor-assignments"></div>
+  `;
+  const wrap = document.getElementById('vendor-assignments');
+  if (error) { wrap.innerHTML = `<p class="muted">${error.message}</p>`; return; }
+  if (!assignments || !assignments.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="display">No assignments yet</div><p>You'll see logistics here once you're booked for an event.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = assignments.map(a => `
+    <div class="card">
+      <h2>${a.events?.name || 'Event'}</h2>
+      <p class="muted">${a.events?.event_date || ''} · ${a.events?.venue || ''} <span class="badge ${a.events?.status}">${a.events?.status}</span></p>
+      <div class="ticket-divider"></div>
+      <table>
+        <tr><th>Arrival time</th><td>${a.arrival_time ? new Date(a.arrival_time).toLocaleString() : 'TBD'}</td></tr>
+        <tr><th>Onsite contact</th><td>${a.onsite_contact || 'TBD'}</td></tr>
+        <tr><th>Load-in notes</th><td>${a.load_in_notes || '—'}</td></tr>
+        <tr><th>Status</th><td><span class="badge confirmed">${a.status}</span></td></tr>
+      </table>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>
